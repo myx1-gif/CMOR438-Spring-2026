@@ -117,8 +117,16 @@ Recursion stops when any of the following is true:
 - **Overfitting risk:** deep trees can memorize data; `max_depth` helps regularize.
 - **Greedy optimization:** each split is locally optimal, not globally optimal.
 
-## How to Run the Example
+## Tutorial notebook (Jupyter)
 
-From the repository root:
+From the repository root, install dependencies if needed (`pip install -r requirements.txt`), then start Jupyter and open:
 
-`python examples/supervised_learning/decision_tree_classifier/example.py`
+[decision_tree_classifier_tutorial.ipynb](decision_tree_classifier_tutorial.ipynb)
+
+Alternatively from a terminal:
+
+`jupyter notebook examples/supervised_learning/decision_tree_classifier/decision_tree_classifier_tutorial.ipynb`
+
+The notebook loads **Iris** via scikit-learn, performs a stratified **train/test split**, fits `DecisionTreeClassifier` on the training fold only, and reports **out-of-sample** predictions and accuracy on the held-out test fold.
+
+When you run the optional scatter-plot cell, it also saves **`iris_petal_scatter.png`** next to this README (same folder as the notebook) if your working directory is that folder; if you launch Jupyter from the repository root instead, it writes under `examples/supervised_learning/decision_tree_classifier/iris_petal_scatter.png`.
