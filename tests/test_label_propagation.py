@@ -83,3 +83,109 @@ def test_mismatched_lengths_raises():
     y = np.array([0])
     with pytest.raises(ValueError):
         model.fit(X, y)
+
+
+def test_label_propagation_fit_returns_self():
+    X, y = _make_two_class_data()
+    model = GraphLabelPropagation()
+    assert model.fit(X, y) is model
+
+
+def test_label_propagation_defaults():
+    model = GraphLabelPropagation()
+    assert model.spread == 0.9
+    assert model.bandwidth == 1.0
+    assert model.max_iterations == 1000
+    assert model.convergence_tol == 1e-4
+    assert model.clamp_labelled is True
+    assert model.classes_ is None
+    assert model.labels_ is None
+    assert model.distribution_ is None
+    assert model.transition_ is None
+
+
+def test_label_propagation_transition_rows_sum_to_one():
+    """Each row of the transition matrix should sum to 1 (row-normalisation)."""
+    X, y = _make_two_class_data()
+    model = GraphLabelPropagation().fit(X, y)
+    row_sums = model.transition_.sum(axis=1)
+    assert np.allclose(row_sums, 1.0, atol=1e-10)
+
+
+def test_label_propagation_transition_zero_diagonal():
+    """RBF graph removes self-similarity, so the transition matrix has a zero diagonal."""
+    X, y = _make_two_class_data()
+    model = GraphLabelPropagation().fit(X, y)
+    assert np.allclose(np.diag(model.transition_), 0.0, atol=1e-12)
+
+
+def test_label_propagation_distribution_shape():
+    X, y = _make_two_class_data()
+    model = GraphLabelPropagation().fit(X, y)
+    assert model.distribution_.shape == (30, 2)
+    assert model.labels_.shape == (30,)
+
+
+def test_label_propagation_classes_stored_sorted():
+    """classes_ should be a sorted unique list of observed labels (ignoring -1)."""
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(20, 2))
+    y = np.array([-1] * 17 + [5, 2, 2])
+    model = GraphLabelPropagation().fit(X, y)
+    assert list(model.classes_) == [2, 5]
+
+
+def test_label_propagation_deterministic():
+    """Same inputs should yield identical predictions (no randomness)."""
+    X, y = _make_two_class_data()
+    model_a = GraphLabelPropagation(spread=0.8, bandwidth=1.5).fit(X, y)
+    model_b = GraphLabelPropagation(spread=0.8, bandwidth=1.5).fit(X, y)
+    assert np.array_equal(model_a.labels_, model_b.labels_)
+    assert np.allclose(model_a.distribution_, model_b.distribution_, atol=1e-12)
+
+
+def test_label_propagation_clamped_vs_unclamped():
+    """With clamp_labelled=True, labelled rows' distribution stays one-hot."""
+    X, y = _make_two_class_data()
+    model = GraphLabelPropagation(clamp_labelled=True).fit(X, y)
+    clamped_idx = np.where(y != -1)[0]
+    for i in clamped_idx:
+        col = int(np.argmax(model.distribution_[i]))
+        assert model.distribution_[i, col] == 1.0
+        assert np.sum(model.distribution_[i]) == 1.0
+
+
+def test_label_propagation_single_labelled_class():
+    """If only one class is labelled, all predictions should be that class."""
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(15, 2))
+    y = np.full(15, -1, dtype=int)
+    y[0] = 4
+    model = GraphLabelPropagation(bandwidth=1.0).fit(X, y)
+    assert np.all(model.labels_ == 4)
+
+
+def test_label_propagation_labelled_points_predicted_correctly():
+    """All originally-labelled points should keep their true class."""
+    X, y = _make_two_class_data()
+    model = GraphLabelPropagation().fit(X, y)
+    labelled_mask = y != -1
+    assert np.array_equal(model.labels_[labelled_mask], y[labelled_mask])
+
+
+def test_label_propagation_predict_returns_same_shape():
+    X, y = _make_two_class_data()
+    model = GraphLabelPropagation().fit(X, y)
+    preds = model.predict()
+    assert preds.shape == (30,)
+
+
+def test_label_propagation_bandwidth_affects_similarity():
+    """Larger bandwidth should produce a smoother (less peaked) similarity matrix."""
+    X, _ = _make_two_class_data()
+    y = np.full(X.shape[0], -1, dtype=int)
+    y[0] = 0
+    y[15] = 1
+    m_small = GraphLabelPropagation(bandwidth=0.1).fit(X, y)
+    m_large = GraphLabelPropagation(bandwidth=5.0).fit(X, y)
+    assert m_small.transition_.var() >= m_large.transition_.var()
