@@ -113,6 +113,6 @@ Or from a terminal:
 
 `jupyter notebook examples/supervised_learning/decision_tree_regressor/decision_tree_regressor_tutorial.ipynb`
 
-The notebook loads the **Diabetes** regression dataset from scikit-learn, performs a **train/test split**, fits `DecisionTreeRegressor` on the training fold only, reports **out-of-sample** \\(R^2\\), **MAE**, and **RMSE**, and includes an optional **true vs predicted** scatter plot.
+The notebook loads the **Diabetes** regression dataset from scikit-learn, performs a **train/test split**, fits `DecisionTreeRegressor` on the training fold only, reports **out-of-sample** \\(R^2\\), **MAE**, and **RMSE**, and includes a **true vs predicted** scatter plot (Step 7) plus a **`max_depth`** comparison table (Step 8).
 
-When you run the optional plot cell, it saves **`diabetes_y_vs_yhat_scatter.png`** in the same folder as the notebook if your working directory is that folder; if you start Jupyter from the repository root, it writes under `examples/supervised_learning/decision_tree_regressor/diabetes_y_vs_yhat_scatter.png`.
+Step 7 saves **`diabetes_y_vs_yhat_scatter.png`** in the same folder as the notebook if your working directory is that folder; if you start Jupyter from the repository root, it writes under `examples/supervised_learning/decision_tree_regressor/diabetes_y_vs_yhat_scatter.png`.

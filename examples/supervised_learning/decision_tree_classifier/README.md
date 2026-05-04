@@ -129,4 +129,4 @@ Alternatively from a terminal:
 
 The notebook loads **Iris** via scikit-learn, performs a stratified **train/test split**, fits `DecisionTreeClassifier` on the training fold only, and reports **out-of-sample** predictions and accuracy on the held-out test fold.
 
-When you run the optional scatter-plot cell, it also saves **`iris_petal_scatter.png`** next to this README (same folder as the notebook) if your working directory is that folder; if you launch Jupyter from the repository root instead, it writes under `examples/supervised_learning/decision_tree_classifier/iris_petal_scatter.png`.
+Step 7 (scatter plot) also saves **`iris_petal_scatter.png`** next to this README (same folder as the notebook) if your working directory is that folder; if you launch Jupyter from the repository root instead, it writes under `examples/supervised_learning/decision_tree_classifier/iris_petal_scatter.png`.
