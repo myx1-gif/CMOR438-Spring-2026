@@ -80,6 +80,6 @@ Open [`logistic_regression_tutorial.ipynb`](logistic_regression_tutorial.ipynb) 
 
 `jupyter notebook examples/supervised_learning/logistic_regression/logistic_regression_tutorial.ipynb`
 
-The notebook uses the **Wisconsin Breast Cancer** dataset (two classes, 30 numeric features). It uses a **stratified** train/test split, **standardizes** features using training statistics, fits `LogisticRegression`, reports **accuracy** and a small **confusion-style** view, visualizes two scaled features, and **compares** a few **`n_iterations`** values on the same split.
+The notebook uses the **Wisconsin Breast Cancer** dataset (two classes, 30 numeric features). It uses a **stratified** train/test split, **standardizes** features using training statistics, fits `LogisticRegression`, reports **accuracy** and a small **confusion-style** view, and **compares** a few **`n_iterations`** values on the same split.
 
-Step 7 saves **`breast_cancer_two_features_scatter.png`** next to the notebook when the working directory is that folder; from the repository root it writes under `examples/supervised_learning/logistic_regression/breast_cancer_two_features_scatter.png`.
+Step 7 refits a **2-feature** logistic model (mean radius & mean texture) to draw a **linear decision boundary** with shaded class regions and **test-set** points (red squares / blue crosses), then saves **`breast_cancer_logistic_decision_boundary.png`** next to the notebook when the working directory is that folder; from the repository root it writes under `examples/supervised_learning/logistic_regression/breast_cancer_logistic_decision_boundary.png`.
