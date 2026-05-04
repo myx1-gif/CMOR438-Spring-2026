@@ -35,6 +35,28 @@ b \\leftarrow b - \\eta \\frac{\\partial \\mathcal{L}}{\\partial b}.
 
 `numpy.clip` inside `_sigmoid` limits \\(z\\) for numerical stability.
 
+### Probabilistic model (Bernoulli likelihood)
+
+Treating \\(y_i\\in\\{0,1\\}\\) as independent Bernoulli draws with \\(P(y_i=1\\mid \\mathbf{x}_i)=\\sigma(\\mathbf{w}^\\top\\mathbf{x}_i+b)\\), the negative log-likelihood (up to constants) equals the **binary cross-entropy** \\(\\mathcal{L}\\) above. Thus gradient descent performs **approximate maximum-likelihood estimation** of \\((\\mathbf{w},b)\\).
+
+### Log-odds (logit) link
+
+The inverse map of \\(\\sigma\\) is the **logit**:
+
+\\[
+\\operatorname{logit}(p) = \\log\\frac{p}{1-p} = \\mathbf{w}^\\top \\mathbf{x} + b ,
+\\]
+
+so the model is a **generalized linear model** with canonical **logit link** and **Bernoulli** error distribution.
+
+### Convexity and the Hessian sketch
+
+\\(\\mathcal{L}\\) is **convex** in \\((\\mathbf{w},b)\\) because \\(-\\log \\sigma(z)\\) and \\(-\\log(1-\\sigma(z))\\) are convex in \\(z\\), and \\(z\\) is affine in parameters. The batch gradient shown is exact for \\(\\nabla \\mathcal{L}\\). The Hessian involves \\(\\mathbf{X}^\\top \\mathbf{D}\\mathbf{X}\\) with a diagonal weighting \\(\\mathbf{D}\\) from second derivatives of \\(\\sigma\\); under mild conditions it is positive semidefinite—explaining a unique global minimum when features are not collinear in a degenerate way.
+
+### Relation to the perceptron
+
+The perceptron uses a **hard** threshold on \\(\\mathbf{w}^\\top\\mathbf{x}+b\\); logistic regression **smooths** that step with \\(\\sigma\\), yielding smooth gradients and probabilistic outputs instead of only \\(\\{0,1\\}\\).
+
 ## Hyperparameters
 
 | Parameter          | Type   | Description                                      |

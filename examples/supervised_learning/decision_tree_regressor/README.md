@@ -22,38 +22,54 @@ Training is greedy and recursive:
 
 Inference routes each \\(\\mathbf{x}\\) root-to-leaf and returns that leaf mean.
 
-## Mathematical Foundation
+## Mathematical foundation
 
-Suppose a node holds targets \\(y_1,\\ldots,y_n\\) with population-style variance  
-\\(\\operatorname{Var}(y)=\\frac{1}{n}\\sum_{i=1}^{n}(y_i-\\bar y)^2\\) (`numpy.var(..., ddof=0)`, matching this code).
-
-### 1) Impurity / node homogeneity
-
-Larger variance means \\(y\\) is more spread out inside the region; splitting aims to concentrate similar responses in each child.
-
-### 2) Variance reduction from a candidate split
-
-Let a split partition indices into left (\\(n_L\\) points) and right (\\(n_R\\) points), \\(n=n_L+n_R\\). Define **weighted child variance**:
+At a node \\(N\\) containing targets \\(\\{y_i : i\\in N\\}\\) with \\(n = |N|\\), this code uses the **population** variance (divide by \\(n\\), `ddof=0`):
 
 \\[
-\\operatorname{Var}_{\\text{split}} = \\frac{n_L}{n}\\operatorname{Var}(y^{(L)}) + \\frac{n_R}{n}\\operatorname{Var}(y^{(R)})
+\\operatorname{Var}(N) = \\frac{1}{n}\\sum_{i\\in N}(y_i - \\bar{y}_N)^2, \\qquad
+\\bar{y}_N = \\frac{1}{n}\\sum_{i\\in N} y_i .
 \\]
 
-This implementation maximizes:
+### 1) Variance as impurity for regression trees
+
+Unlike classification entropy, regression trees use **within-node spread** of \\(y\\) as impurity. Large \\(\\operatorname{Var}(N)\\) means responses in the cell vary widely; the split objective is to create children where \\(y\\) is more tightly clustered.
+
+### 2) Variance reduction and its link to squared error
+
+For a split into \\(L,R\\) with sizes \\(n_L,n_R\\), \\(n=n_L+n_R\\), define the **between-node pooled** variance
 
 \\[
-\\Delta = \\operatorname{Var}(y^{\\text{parent}}) - \\operatorname{Var}_{\\text{split}}
+\\operatorname{Var}_{\\text{after}} = \\frac{n_L}{n}\\operatorname{Var}(L) + \\frac{n_R}{n}\\operatorname{Var}(R).
 \\]
 
-(or equivalently **minimizes** \\(\\operatorname{Var}_{\\text{split}}\\) after fixing the parent). The chosen \\((j^*, t^*)\\) is the pair with largest \\(\\Delta\\) among splits that assign at least one point to each side.
-
-### 3) Leaf prediction within this implementation
-
-For any leaf node \\(L\\),
+The implementation maximizes **variance drop**
 
 \\[
-\\hat{y}_{\\mathrm{leaf}} = \\frac{1}{|L|}\\sum_{i\\in L} y_i .
+\\Delta(j,t) = \\operatorname{Var}(N) - \\operatorname{Var}_{\\text{after}}.
 \\]
+
+For a fixed partition \\((L,R)\\), the **constant** \\(c_L,c_R\\) that minimize \\(\\sum_{i\\in L}(y_i-c_L)^2 + \\sum_{i\\in R}(y_i-c_R)^2\\) are \\(c_L=\\bar{y}_L\\), \\(c_R=\\bar{y}_R\\). Under those optimal constants, the **sum of squared errors** decomposes across the split in a way that makes **maximizing \\(\\Delta\\)** align with **greedy reduction of total SSE**—the same impurity philosophy as CART regression: each split greedily improves the best piecewise-constant approximation with one more breakpoint on an axis.
+
+### 3) Leaf prediction as constant least squares
+
+Each leaf predicts the **sample mean** of training \\(y\\) in that leaf:
+
+\\[
+\\hat{y}_L = \\frac{1}{|L|}\\sum_{i\\in L} y_i ,
+\\]
+
+which is the **L2-optimal** constant predictor for squared error on the training points assigned to \\(L\\).
+
+### 4) \\(R^2\\) returned by `score`
+
+Let \\(\\hat{y}_i\\) be tree predictions on a set of \\(n\\) pairs \\((\\mathbf{x}_i,y_i)\\), and \\(\\bar{y} = \\frac{1}{n}\\sum_i y_i\\). The implementation reports
+
+\\[
+R^2 = 1 - \\frac{\\sum_{i=1}^{n}(y_i-\\hat{y}_i)^2}{\\sum_{i=1}^{n}(y_i-\\bar{y})^2},
+\\]
+
+the usual **coefficient of determination** relative to the **mean baseline** on that same set. If \\(\\operatorname{Var}(y)=0\\) on the passed-in \\(y\\), the code returns `1.0`.
 
 ## Stopping Conditions in This Implementation
 

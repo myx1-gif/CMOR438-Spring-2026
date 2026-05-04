@@ -15,7 +15,35 @@ For each of **`n_estimators`** trees:
 
 ## Prediction
 
-The forest prediction is the **mean** of all tree predictions at each test row.
+The forest prediction is the **mean** of all tree predictions at each test row:
+
+\\[
+\\hat{y}(\\mathbf{x}) = \\frac{1}{B}\\sum_{b=1}^{B} T_b(\\mathbf{x}),
+\\]
+
+where \\(B\\) is **`n_estimators`**.
+
+where each \\(T_b\\) is a **regression tree** fit on a bootstrap sample and a random feature subset (same mechanism as the classifier forest).
+
+## Mathematical viewpoint (variance reduction)
+
+### Bagging for regression
+
+Let \\(Y_i\\) be noisy targets and consider idealized trees \\(T_b\\) trained on **bootstrap** replicates. The bagged regressor \\(\\bar{T}(\\mathbf{x}) = B^{-1}\\sum_b T_b(\\mathbf{x})\\) has variance
+
+\\[
+\\mathrm{Var}(\\bar{T}) = \\frac{1}{B^2}\\sum_{b,b'} \\mathrm{Cov}(T_b, T_{b'}) .
+\\]
+
+If trees were uncorrelated with common variance \\(\\sigma^2\\), \\(\\mathrm{Var}(\\bar{T}) = \\sigma^2/B\\). **Positive correlation** across trees (same data, similar structure) **inflates** ensemble variance but is still typically **below** the variance of any single high-variance tree—this is the **bias–variance tradeoff** motivating forests.
+
+### Squared-error decomposition at a point
+
+For squared error loss at \\(\\mathbf{x}\\), averaging predictions **cannot increase** the Bayes risk relative to choosing a single random tree when errors are negatively correlated enough; in practice, averaging smooths **jagged** tree surfaces into a **lower-variance** piecewise smoother estimate.
+
+### Connection to CART base learners
+
+Each \\(T_b\\) is the same **variance-reduction** greedy tree as `DecisionTreeRegressor`: piecewise constant on axis-aligned cells. The forest **averages** many such surfaces, approximating a **weighted ensemble** of local constant experts.
 
 ## Hyperparameters
 

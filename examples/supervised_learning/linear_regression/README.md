@@ -26,6 +26,32 @@ OLS minimizes the residual sum of squares:
 
 Using `numpy.linalg.pinv` handles rank-deficient or ill-conditioned feature matrices more robustly than a literal matrix inverse.
 
+### Derivation from first-order optimality (normal equations)
+
+Stack the intercept by augmenting each row \\(\\mathbf{x}_i^\\top\\) with a leading 1 so the design matrix \\(\\mathbf{X}\\in\\mathbb{R}^{n\\times (p+1)}\\) has rows \\((1, x_{i1},\\ldots,x_{ip})\\). Stacking targets \\(\\mathbf{y}\\in\\mathbb{R}^n\\), OLS minimizes the convex quadratic
+
+\\[
+J(\\boldsymbol{\\theta}) = \\|\\mathbf{y} - \\mathbf{X}\\boldsymbol{\\theta}\\|_2^2 .
+\\]
+
+Setting the gradient to zero,
+
+\\[
+\\nabla J(\\boldsymbol{\\theta}) = -2\\mathbf{X}^\\top(\\mathbf{y} - \\mathbf{X}\\boldsymbol{\\theta}) = \\mathbf{0}
+\\quad\\Longrightarrow\\quad
+\\mathbf{X}^\\top\\mathbf{X}\\,\\boldsymbol{\\theta} = \\mathbf{X}^\\top \\mathbf{y}.
+\\]
+
+If \\(\\mathbf{X}^\\top\\mathbf{X}\\) is invertible, \\(\\boldsymbol{\\theta} = (\\mathbf{X}^\\top\\mathbf{X})^{-1}\\mathbf{X}^\\top \\mathbf{y}\\). Otherwise the **Moore–Penrose** solution \\(\\boldsymbol{\\theta} = (\\mathbf{X}^\\top\\mathbf{X})^{+}\\mathbf{X}^\\top \\mathbf{y}\\) picks the **minimum-norm** least-squares solution among all minimizers of \\(J\\).
+
+### Geometric interpretation (orthogonal projection)
+
+The fitted vector \\(\\hat{\\mathbf{y}} = \\mathbf{X}\\boldsymbol{\\theta}\\) is the **orthogonal projection** of \\(\\mathbf{y}\\) onto the column space \\(\\mathrm{col}(\\mathbf{X})\\) under the Euclidean inner product on \\(\\mathbb{R}^n\\). Equivalently, the residual \\(\\mathbf{r} = \\mathbf{y}-\\hat{\\mathbf{y}}\\) is orthogonal to every column of \\(\\mathbf{X}\\): \\(\\mathbf{X}^\\top \\mathbf{r} = \\mathbf{0}\\) (score / normal equations in residual form).
+
+### The hat matrix
+
+When \\(\\mathbf{X}^\\top\\mathbf{X}\\) is invertible, \\(\\mathbf{H} = \\mathbf{X}(\\mathbf{X}^\\top\\mathbf{X})^{-1}\\mathbf{X}^\\top\\) satisfies \\(\\hat{\\mathbf{y}} = \\mathbf{H}\\mathbf{y}\\). The diagonal entries \\(h_{ii}\\) (**leverage**) measure how much observation \\(i\\) influences its own prediction; large leverage with a small residual still flags influential points in diagnostics.
+
 ## Learned parameters
 
 After `fit`, access:

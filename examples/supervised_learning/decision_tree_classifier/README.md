@@ -24,50 +24,63 @@ Training is greedy and recursive:
 
 During inference, each sample traverses the tree from root to leaf, and the leaf class is returned.
 
-## Mathematical Foundation
+## Mathematical foundation
 
-Let a node contain labels  y = y_1, \dots, y_n , and let class proportions be:
+Consider a node \\(N\\) containing \\(n\\) labeled samples \\((\\mathbf{x}_i, y_i)\\) with class labels in a finite set \\(\\mathcal{K}\\). Let
 
+\\[
+n_k = \\sum_{i\\in N} \\mathbf{1}\\{y_i = k\\}, \\qquad p_k = \\frac{n_k}{n}
+\\]
 
-p_k = \frac{i : y_i = k}{n}
+be class counts and empirical class proportions at that node.
 
+### 1) Shannon entropy as impurity
 
-### 1) Node impurity via Shannon entropy
+The implementation uses **binary entropy** (log base 2):
 
+\\[
+H(N) = -\\sum_{k\\in\\mathcal{K}} p_k \\log_2 p_k ,
+\\]
 
-H(y) = -\sum_{k} p_k \log_2(p_k)
+with the convention \\(0\\log_2 0 = 0\\). Entropy is **concave** in \\(\\mathbf{p}\\): it is zero iff one \\(p_k=1\\) (pure node), and maximized at the uniform distribution over classes present (most “mixed” for fixed support).
 
+### 2) Information gain and conditional entropy
 
-- H(y)=0 when the node is pure (all one class).
-- H(y) is larger when classes are more mixed.
+A candidate axis-aligned split on feature \\(j\\) at threshold \\(t\\) partitions \\(N\\) into a left child \\(L\\) (points with \\(x_{ij}\\le t\\)) and right child \\(R\\) (strict inequality in code: \\(x_{ij} > t\\)). Define the **weighted child entropy**
 
-### 2) Information gain for a split
+\\[
+H_{\\text{after}}(j,t) = \\frac{n_L}{n} H(L) + \\frac{n_R}{n} H(R).
+\\]
 
-Given a candidate split that partitions labels into `left` and `right`:
+**Information gain** is the drop in entropy:
 
+\\[
+\\mathrm{IG}(j,t) = H(N) - H_{\\text{after}}(j,t).
+\\]
 
-\text{IG} = H(\text{parent}) - \left(\frac{n_L}{n}H(\text{left}) + \frac{n_R}{n}H(\text{right})\right)
+Equivalently, \\(\\mathrm{IG}\\) is the **mutual information** \\(I(Y;\\, \\mathbf{1}\\{X_j \\le t\\})\\) under the empirical distribution at the node: it measures how much knowing which side of the split a point falls on reduces uncertainty about \\(Y\\).
 
+The learner chooses
 
-where n_L and n_R are the number of samples in left/right child.
+\\[
+(j^\\*, t^\\*) \\in \\arg\\max_{j,t\\in\\mathcal{T}_j} \\mathrm{IG}(j,t),
+\\]
 
-The selected split is:
+where \\(\\mathcal{T}_j\\) is the set of **distinct observed** thresholds for feature \\(j\\) on the training points in the node (this is the standard exhaustive search for univariate CART-style splits on numeric data).
 
+### 3) Greedy tree growing as a piecewise-constant classifier
 
-(j^*, t^*) = \arg\max_{j,t} \text{IG}(j,t)
+Inductively, each split refines a **partition** of \\(\\mathbb{R}^p\\) into axis-aligned cells; every leaf cell predicts a **constant** class label (majority vote). Thus the fitted classifier is a **piecewise-constant** function of \\(\\mathbf{x}\\). Training is **greedy**: each split maximizes \\(\\mathrm{IG}\\) **locally** at one node; this does **not** solve the global problem of finding the smallest-error tree (that problem is combinatorially hard). Depth control (`max_depth`) limits how many refinements are allowed, trading bias and variance.
 
+### 4) Leaf prediction
 
-This implementation computes candidate thresholds from unique observed values in each feature and chooses the best valid binary split.
+At a leaf \\(L\\) with labels \\(\\{y_i : i\\in L\\}\\), the implementation predicts
 
-### 3) Leaf prediction rule
+\\[
+\\hat{y}_L = \\arg\\max_{k} \\sum_{i\\in L} \\mathbf{1}\\{y_i = k\\},
+\\]
 
-When splitting stops, a node predicts:
-
-
-\hat{y}_{leaf} = \operatorname{mode}(y)
-
-
-If a node is already pure, that class is returned directly.
+the **majority class** (mode). If the node is already pure, this equals the common label of all points in the leaf.
 
 ## Stopping Conditions in This Implementation
 
@@ -103,10 +116,11 @@ Recursion stops when any of the following is true:
 ## `score(X, y)`
 
 - **Input:** feature matrix `X` and true labels `y`.
-- **Output:** scalar float accuracy:
+- **Output:** scalar float **0–1 accuracy**:
 
-
-\text{accuracy} = \frac{1}{n}\sum_{i=1}^{n}\mathbf{1}\hat{y}_i = y_i
+\\[
+\\mathrm{Acc} = \\frac{1}{n}\\sum_{i=1}^{n} \\mathbf{1}\\{\\hat{y}_i = y_i\\}.
+\\]
 
 
 ## Practical Characteristics

@@ -37,6 +37,20 @@ Let neighbor labels be \\(y_{(1)},\\ldots,y_{(k)}\\). This implementation predic
 
 implemented via `numpy.bincount` over integer class ids.
 
+### Decision regions and the Bayes classifier (intuition)
+
+With **\\(k=1\\)**, the classifier is a **nearest-neighbor** rule: \\(\\hat{y}(\\mathbf{x}) = y_{\\pi(1)}\\) where \\(\\pi(1)\\) is the index of the closest training point. In \\(\\mathbb{R}^p\\), the set of points closer to training point \\(\\mathbf{x}^{(i)}\\) than to any other training point forms a **Voronoi cell**; 1-NN induces a **Voronoi partition** of space labeled by training tags.
+
+For **general \\(k\\)**, the prediction is a **local majority vote** within the metric ball ordering induced by distances: as \\(k\\) grows, predictions **smooth** (higher bias, lower variance under common asymptotics); small \\(k\\) tracks the training labels more closely (low bias, high variance). In the **two-class** case with odd \\(k\\), ties in the vote count are impossible; for multiclass ties, `argmax` of counts picks a deterministic winner among tied classes.
+
+### Metric structure (this implementation)
+
+Only the **Euclidean** \\(\\ell_2\\) metric is implemented. More generally \\(\\ell_q\\) distances \\(d(\\mathbf{x},\\mathbf{z}) = (\\sum_j |x_j-z_j|^q)^{1/q}\\) weight coordinate differences differently; **Mahalanobis** distance \\(\\sqrt{(\\mathbf{x}-\\mathbf{z})^\\top \\mathbf{\\Sigma}^{-1}(\\mathbf{x}-\\mathbf{z})}\\) rescales correlated features. Euclidean KNN is **equivariant to rigid motions** (translations/rotations) of feature space after scaling, but **not** invariant to arbitrary linear transforms unless you bake the metric accordingly—hence **per-feature standardization** when units differ.
+
+### Complexity
+
+A single query costs **\\(O(n_{\\mathrm{train}} \\cdot p)\\)** time and **\\(O(n_{\\mathrm{train}})\\)** memory to store data; there is no compact parametric model. Fast \\(k\\)-NN libraries use spatial data structures (KD-trees, locality-sensitive hashing); this educational code uses brute-force loops.
+
 ## Hyperparameters
 
 | Parameter       | Type  | Description                                                                 |

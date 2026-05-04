@@ -19,6 +19,30 @@ For each of **`n_estimators`** trees:
 
 For a test row \\(\\mathbf{x}\\), each tree outputs a class label. The forest returns the **mode** (majority vote) over trees. Ties are resolved by `numpy.bincount(...).argmax()` (smallest class index among tied maxima).
 
+## Mathematical viewpoint (bagging + random subspaces)
+
+Let \\(T_b\\) denote the \\(b\\)-th randomized tree predictor (bootstrap sample + random feature subset). The forest classifier is
+
+\\[
+\\hat{y}(\\mathbf{x}) = \\arg\\max_{k} \\sum_{b=1}^{B} \\mathbf{1}\\{ T_b(\\mathbf{x}) = k \\},
+\\]
+
+where \\(B\\) is the constructor argument **`n_estimators`**.
+
+### Bootstrap variance (intuition)
+
+Each \\(T_b\\) is trained on an i.i.d. **with-replacement** sample of size \\(n\\) from the empirical distribution; the **out-of-bag** fraction is about \\((1-1/n)^n \\approx e^{-1}\\), leaving roughly **63%** in-bag per tree on average. **Bagging** averages (or votes over) **conditionally independent** (given data) randomized predictors to **reduce variance** when the base learner is **unstable** (small changes in data change predictions a lot—deep trees).
+
+Formally, for squared error regression analogs, the variance of the average of \\(B\\) identically distributed correlated predictors decomposes into a **\\(1/B\\)** term plus a correlation penalty; **random feature subsets** decorrelate trees so the ensemble benefits more from averaging than \\(B\\) copies of the same tree would.
+
+### Random subspace method
+
+Choosing a random subset \\(\\mathcal{S}_b \\subseteq \\{1,\\ldots,p\\}\\) of features for each tree injects **diversity**: different trees probe different projections of \\(\\mathbb{R}^p\\), reducing covariance between their errors on test points. Using **`max_features="sqrt"`** uses about \\(\\sqrt{p}\\) features per split search per tree, a common heuristic in high dimensions.
+
+### Majority vote as Bayes under tree independence (rough intuition)
+
+If trees were **independent** classifiers with equal error rates, majority vote corresponds to reducing the probability that **more than half** are wrong—binomial tail probabilities shrink exponentially in \\(B\\). Real trees are correlated, so the benefit is less than the idealized analysis, but the same mechanism drives ensemble gains.
+
 ## Hyperparameters
 
 | Parameter       | Description |

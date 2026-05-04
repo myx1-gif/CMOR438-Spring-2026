@@ -16,9 +16,46 @@ Implementation: [`src/mlpackage/supervised_learning/multilayer_perceptron.py`](.
 P(y=k \\mid \\mathbf{x}) = \\frac{e^{z_k}}{\\sum_j e^{z_j}} .
 \\]
 
-## Loss
+## Forward pass (notation)
 
-For one-hot targets implied by integer labels \\(y_i\\), the per-sample cross-entropy is \\(-\\log P(y_i \\mid \\mathbf{x}_i)\\). The implementation averages over the batch and adds **L2** penalty \\(\\frac{\\lambda}{2}\\sum \\|W\\|^2\\) on all weight matrices (`l2_penalty`).
+Let `layer_sizes` be \\([d_0, d_1, \\ldots, d_L]\\) with input \\(\\mathbf{a}^{(0)} = \\mathbf{x} \\in \\mathbb{R}^{d_0}\\). For each hidden layer \\(\\ell=1,\\ldots,L-1\\),
+
+\\[
+\\mathbf{z}^{(\\ell)} = \\mathbf{W}^{(\\ell)} \\mathbf{a}^{(\\ell-1)} + \\mathbf{b}^{(\\ell)}, \\qquad
+\\mathbf{a}^{(\\ell)} = \\phi\\big(\\mathbf{z}^{(\\ell)}\\big),
+\\]
+
+where \\(\\phi\\) is `tanh`, `sigmoid`, or `relu` applied elementwise. Logits at the output layer are \\(\\mathbf{z}^{(L)}\\); class probabilities are
+
+\\[
+p_k = \\frac{e^{z^{(L)}_k}}{\\sum_j e^{z^{(L)}_j}} .
+\\]
+
+## Loss (cross-entropy + weight decay)
+
+For integer labels \\(y_i\\in\\{0,\\ldots,K-1\\}\\) and softmax outputs \\(\\mathbf{p}_i\\), the **average multiclass cross-entropy** is
+
+\\[
+\\mathcal{L}_{\\mathrm{CE}} = -\\frac{1}{n}\\sum_{i=1}^{n} \\log p_{i,y_i}.
+\\]
+
+The implementation adds **L2 regularization** on all weight matrices (hidden \\(\\mathbf{W}^{(\\ell)}\\) and final output weights \\(\\mathbf{W}^{(L)}\\)):
+
+\\[
+\\mathcal{L} = \\mathcal{L}_{\\mathrm{CE}} + \\frac{\\lambda}{2}\\Big(\\|\\mathbf{W}^{(L)}\\|_F^2 + \\sum_{\\ell=1}^{L-1} \\|\\mathbf{W}^{(\\ell)}\\|_F^2\\Big),
+\\]
+
+with **`l2_penalty`** = \\(\\lambda\\). Gradients on weights pick up an extra **\\(\\lambda \\mathbf{W}\\)** term (Tikhonov / ridge on weights), shrinking parameters toward zero to reduce overfitting.
+
+### Backpropagation (structure)
+
+Let \\(\\delta^{(L)} = \\mathbf{p} - \\mathbf{y}_{\\text{one-hot}}\\) for the softmax layer. Propagating upstream,
+
+\\[
+\\delta^{(\\ell)} = \\big((\\mathbf{W}^{(\\ell+1)})^\\top \\delta^{(\\ell+1)}\\big) \\odot \\phi'(\\mathbf{z}^{(\\ell)}),
+\\]
+
+and weight gradients are outer products of activations and downstream signals (averaged over the batch in this code). This is the **multivariate chain rule** applied systematically along the computation graph.
 
 ## Hyperparameters
 
