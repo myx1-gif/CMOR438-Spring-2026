@@ -40,6 +40,13 @@ class PrincipalComponentAnalysis:
         self.feature_mean_: Optional[np.ndarray] = None
 
     def fit(self, X: np.ndarray) -> "PrincipalComponentAnalysis":
+        """Learn the mean, eigenvalues, and principal axes from ``X``.
+
+        Returns
+        -------
+        PrincipalComponentAnalysis
+            The fitted instance (``self``).
+        """
         X = np.asarray(X, dtype=float)
         if X.size == 0:
             raise ValueError("Empty data provided.")
@@ -53,6 +60,7 @@ class PrincipalComponentAnalysis:
 
         vals, vecs = np.linalg.eigh(cov)
 
+        # largest eigenvalues last in eigh output; reverse for PCA ordering
         order = np.argsort(vals)[::-1]
         vals = vals[order]
         vecs = vecs[:, order]
@@ -68,11 +76,13 @@ class PrincipalComponentAnalysis:
         return self
 
     def transform(self, X: np.ndarray) -> np.ndarray:
+        """Project ``X`` onto the fitted principal axes after centring."""
         if self.axes_ is None:
             raise AttributeError("Model has not been fitted yet.")
         X = np.asarray(X, dtype=float)
         return (X - self.feature_mean_) @ self.axes_.T
 
     def fit_transform(self, X: np.ndarray) -> np.ndarray:
+        """Convenience wrapper calling ``fit`` then ``transform`` on ``X``."""
         self.fit(X)
         return self.transform(X)

@@ -43,6 +43,13 @@ class Perceptron:
         self.training_errors: List[float] = []
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "Perceptron":
+        """Run ``max_iter`` epochs of online updates over ``(X, y)``.
+
+        Returns
+        -------
+        Perceptron
+            The fitted instance (``self``).
+        """
         X = np.asarray(X, dtype=float)
         y = np.asarray(y).ravel()
         if X.size == 0 or y.size == 0:
@@ -57,6 +64,7 @@ class Perceptron:
 
         for _ in range(self.max_iter):
             for i in range(n_samples):
+                # rosenblatt-style update when prediction disagrees with y[i]
                 raw = X[i] @ self.coef_ + self.intercept_
                 predicted = 1 if raw >= 0 else 0
                 correction = self.lr * (y[i] - predicted)
@@ -70,12 +78,14 @@ class Perceptron:
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
+        """Apply the step rule to the linear score for each row of ``X``."""
         if self.coef_ is None or self.intercept_ is None:
             raise AttributeError("Model not fitted yet.")
         X = np.asarray(X, dtype=float)
         return _step_activation(X @ self.coef_ + self.intercept_)
 
     def score(self, X: np.ndarray, y: np.ndarray) -> float:
+        """Mean accuracy of ``predict(X)`` against ``y``."""
         y = np.asarray(y).ravel()
         return float(np.mean(self.predict(X) == y))
 

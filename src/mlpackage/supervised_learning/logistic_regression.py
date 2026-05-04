@@ -42,6 +42,13 @@ class LogisticRegression:
         self.bias: Optional[float] = None
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "LogisticRegression":
+        """Optimise weights and bias by full-batch gradient descent on cross-entropy.
+
+        Returns
+        -------
+        LogisticRegression
+            The fitted instance (``self``).
+        """
         X = np.asarray(X, dtype=float)
         y = np.asarray(y).ravel().astype(float)
         if X.size == 0 or y.size == 0:
@@ -57,6 +64,7 @@ class LogisticRegression:
             linear_term = X @ self.weights + self.bias
             predictions = _sigmoid(linear_term)
 
+            # averaged gradients for the whole batch
             gradient_w = (1.0 / n_samples) * (X.T @ (predictions - y))
             gradient_b = (1.0 / n_samples) * np.sum(predictions - y)
 
@@ -73,9 +81,11 @@ class LogisticRegression:
         return _sigmoid(X @ self.weights + self.bias)
 
     def predict(self, X: np.ndarray) -> np.ndarray:
+        """Return class ``1`` where ``predict_probability(X) >= 0.5``, else ``0``."""
         probabilities = self.predict_probability(X)
         return (probabilities >= 0.5).astype(int)
 
     def score(self, X: np.ndarray, y: np.ndarray) -> float:
+        """Mean accuracy of hard ``predict(X)`` against integer ``y``."""
         y = np.asarray(y).ravel()
         return float(np.mean(self.predict(X) == y))
