@@ -98,6 +98,13 @@ class GraphLabelPropagation:
         self.transition_: Optional[np.ndarray] = None
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "GraphLabelPropagation":
+        """Propagate soft labels along the RBF similarity graph until convergence.
+
+        Returns
+        -------
+        GraphLabelPropagation
+            The fitted instance (``self``).
+        """
         X = np.asarray(X, dtype=float)
         y = np.asarray(y, dtype=int)
         if X.shape[0] == 0:
@@ -116,6 +123,7 @@ class GraphLabelPropagation:
 
         F = initial.copy()
         for _ in range(self.max_iterations):
+            # diffuse label mass then blend back toward the fixed labels
             F_next = self.spread * (self.transition_ @ F) + (1.0 - self.spread) * initial
 
             if self.clamp_labelled:
@@ -131,6 +139,7 @@ class GraphLabelPropagation:
         return self
 
     def predict(self, X: Optional[np.ndarray] = None) -> np.ndarray:
+        """Return hard labels from the last ``fit``; ``X`` is accepted for API symmetry only."""
         if self.labels_ is None:
             raise AttributeError("Model has not been fitted yet.")
         return self.labels_

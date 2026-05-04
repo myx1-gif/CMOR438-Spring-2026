@@ -1,4 +1,4 @@
-"""k-Nearest Neighbors classifier (educational, NumPy + optional pandas/matplotlib)."""
+"""k-Nearest Neighbors classifier (NumPy + optional pandas/matplotlib)."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ def _euclidean_rows(query: np.ndarray, reference: np.ndarray) -> np.ndarray:
 
 
 def _majority_label(labels: np.ndarray) -> int:
+    """Return the class id with highest count among neighbour labels ``labels``."""
     return int(np.bincount(labels.astype(int, copy=False)).argmax())
 
 
@@ -34,6 +35,13 @@ class KNeighborsClassifier:
         self._y_train: Optional[np.ndarray] = None
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "KNeighborsClassifier":
+        """Store training features ``X`` and integer labels ``y`` (lazy learning).
+
+        Returns
+        -------
+        KNeighborsClassifier
+            The fitted instance (``self``).
+        """
         X = np.asarray(X, dtype=float)
         y = np.asarray(y).ravel()
         if X.size == 0 or y.size == 0:
@@ -45,6 +53,7 @@ class KNeighborsClassifier:
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
+        """Predict labels by Euclidean distance and majority vote over ``n_neighbors``."""
         if self._X_train is None or self._y_train is None:
             raise AttributeError("Model not fitted yet.")
         X = np.asarray(X, dtype=float)
@@ -53,12 +62,14 @@ class KNeighborsClassifier:
         out = np.empty(X.shape[0], dtype=int)
         for row_index in range(X.shape[0]):
             distances = _euclidean_rows(X[row_index], self._X_train)
+            # nearest indices in ascending distance order
             neighbor_order = np.argsort(distances)[:k]
             neighbor_labels = self._y_train[neighbor_order]
             out[row_index] = _majority_label(neighbor_labels)
         return out
 
     def score(self, X: np.ndarray, y: np.ndarray) -> float:
+        """Mean classification accuracy of ``predict(X)`` against ``y``."""
         y = np.asarray(y).ravel()
         preds = self.predict(X)
         return float(np.mean(preds == y))

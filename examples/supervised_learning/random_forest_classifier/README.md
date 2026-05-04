@@ -20,7 +20,7 @@ Defined next to `DecisionTreeClassifier` in [`src/mlpackage/supervised_learning/
 
 ## Practical notes
 
-No OOB error in this educational code; use a held-out test set.
+No OOB error is implemented here; use a held-out test set.
 
 ## Tutorial notebook
 

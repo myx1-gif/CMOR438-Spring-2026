@@ -20,7 +20,7 @@ Training is **`fit(X, y)`** (store arrays). There is **no** compact parametric m
 
 ## Practical notes
 
-Brute-force O(n_train · p) per query in this educational code; curse of dimensionality in high *p*.
+Brute-force O(n_train · p) per query in this implementation; curse of dimensionality in high *p*.
 
 ## Tutorial notebook
 

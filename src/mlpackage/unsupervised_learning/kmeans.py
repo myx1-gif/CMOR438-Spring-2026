@@ -66,6 +66,13 @@ class KMeansClustering:
         self.inertia_: Optional[float] = None
 
     def fit(self, X: np.ndarray, seed: int = 42) -> "KMeansClustering":
+        """Lloyd iterations until convergence or ``max_steps`` is reached.
+
+        Returns
+        -------
+        KMeansClustering
+            The fitted instance (``self``).
+        """
         X = np.asarray(X, dtype=float)
         if X.size == 0:
             raise ValueError("Empty dataset provided.")
@@ -75,6 +82,7 @@ class KMeansClustering:
         self.centers_ = X[chosen].copy()
 
         for _ in range(self.max_steps):
+            # assign then recompute means as new centroids
             assignments = _closest_centroid(X, self.centers_)
             updated = np.array(
                 [X[assignments == k].mean(axis=0) for k in range(self.n_clusters)]
@@ -91,11 +99,13 @@ class KMeansClustering:
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
+        """Assign each row of ``X`` to the nearest fitted centroid index."""
         if self.centers_ is None:
             raise AttributeError("Model has not been fitted yet.")
         return _closest_centroid(np.asarray(X, dtype=float), self.centers_)
 
     def score(self, X: np.ndarray) -> float:
+        """Negative within-cluster sum of squared distances (higher is better)."""
         if self.centers_ is None:
             raise AttributeError("Model has not been fitted yet.")
         X = np.asarray(X, dtype=float)

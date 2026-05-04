@@ -1,4 +1,4 @@
-"""Variance-reduction decision tree and random forest regressor (educational)."""
+"""Variance-reduction decision tree and random forest regressor."""
 
 from __future__ import annotations
 
@@ -28,12 +28,14 @@ class RegressionSplit:
 
 
 def _variance(values: np.ndarray) -> float:
+    """Population variance (``ddof=0``) of target values at a node."""
     if values.size == 0:
         return 0.0
     return float(np.var(values))
 
 
 def _variance_drop(parent: np.ndarray, left: np.ndarray, right: np.ndarray) -> float:
+    """Decrease in weighted variance after splitting ``parent`` into ``left`` and ``right``."""
     if parent.size == 0:
         return 0.0
     left_weight = left.size / parent.size
@@ -46,6 +48,7 @@ def _variance_drop(parent: np.ndarray, left: np.ndarray, right: np.ndarray) -> f
 def _best_regression_split(
     X: np.ndarray, y: np.ndarray
 ) -> Tuple[Optional[int], Optional[float]]:
+    """Greedy axis-aligned split maximising variance reduction on training rows."""
     _, n_features = X.shape
     best_gain = -1.0
     best_feature_index: Optional[int] = None
@@ -55,6 +58,7 @@ def _best_regression_split(
         for threshold in np.unique(X[:, feature_index]):
             left_mask = X[:, feature_index] <= threshold
             right_mask = ~left_mask
+            # ignore trivial partitions
             if not left_mask.any() or not right_mask.any():
                 continue
             gain = _variance_drop(y, y[left_mask], y[right_mask])
@@ -74,6 +78,13 @@ class DecisionTreeRegressor:
         self._root: Optional[RegressionNode] = None
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "DecisionTreeRegressor":
+        """Fit the regression tree to ``X`` and continuous targets ``y``.
+
+        Returns
+        -------
+        DecisionTreeRegressor
+            The fitted estimator (``self``).
+        """
         X = np.asarray(X)
         y = np.asarray(y).ravel()
         if X.size == 0 or y.size == 0:
@@ -84,6 +95,7 @@ class DecisionTreeRegressor:
         return self
 
     def _grow(self, X: np.ndarray, y: np.ndarray, depth: int) -> RegressionNode:
+        """Recursively split until leaves predict the mean response in-region."""
         if np.unique(y).size == 1:
             return RegressionLeaf(value=float(np.mean(y)))
         if self.max_depth is not None and depth >= self.max_depth:
@@ -93,6 +105,7 @@ class DecisionTreeRegressor:
         if feature_index is None:
             return RegressionLeaf(value=float(np.mean(y)))
 
+        # split and fit children on disjoint row subsets
         left_mask = X[:, feature_index] <= threshold
         right_mask = ~left_mask
         left_child = self._grow(X[left_mask], y[left_mask], depth + 1)
@@ -105,6 +118,7 @@ class DecisionTreeRegressor:
         )
 
     def _predict_row(self, row: np.ndarray, node: RegressionNode) -> float:
+        """Traverse ``node`` with ``row`` and return the leaf prediction."""
         if isinstance(node, RegressionLeaf):
             return node.value
         if row[node.feature_index] <= node.threshold:
@@ -112,12 +126,14 @@ class DecisionTreeRegressor:
         return self._predict_row(row, node.right_child)
 
     def predict(self, X: np.ndarray) -> np.ndarray:
+        """Predict a scalar response for each row of ``X``."""
         if self._root is None:
             raise AttributeError("Model not fitted yet.")
         X = np.asarray(X)
         return np.array([self._predict_row(row, self._root) for row in X], dtype=float)
 
     def score(self, X: np.ndarray, y: np.ndarray) -> float:
+        """Return :math:`R^2` between ``y`` and ``predict(X)`` on the same rows."""
         y = np.asarray(y).ravel().astype(float)
         pred = self.predict(X)
         ss_total = float(np.sum((y - y.mean()) ** 2))
@@ -142,6 +158,7 @@ class RandomForestRegressor:
         self._trees: List[Tuple[DecisionTreeRegressor, np.ndarray]] = []
 
     def _feature_subset(self, n_features: int) -> np.ndarray:
+        """Random column indices for one tree (``sqrt`` rule or all features)."""
         if self.max_features == "sqrt":
             num_selected = max(1, int(np.sqrt(n_features)))
             return np.random.choice(n_features, size=num_selected, replace=False)
@@ -150,6 +167,7 @@ class RandomForestRegressor:
         raise ValueError("max_features must be 'sqrt' or None.")
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "RandomForestRegressor":
+        """Fit bagged regression trees with optional random feature subsets per tree."""
         X = np.asarray(X)
         y = np.asarray(y).ravel().astype(float)
         if X.size == 0 or y.size == 0:
@@ -160,6 +178,7 @@ class RandomForestRegressor:
         n_samples, n_features = X.shape
         self._trees.clear()
 
+        # same bootstrap + column subsample pattern as the classifier forest
         for _ in range(self.n_estimators):
             sample_indices = np.random.choice(n_samples, size=n_samples, replace=True)
             feature_indices = self._feature_subset(n_features)
@@ -170,6 +189,7 @@ class RandomForestRegressor:
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
+        """Average tree predictions per row (no per-tree weighting)."""
         X = np.asarray(X)
         if not self._trees:
             raise AttributeError("Model not fitted yet.")

@@ -1,4 +1,4 @@
-"""Entropy-based decision tree and random forest classifier (educational)."""
+"""Entropy-based decision tree and random forest classifier."""
 
 from __future__ import annotations
 
@@ -28,14 +28,17 @@ class SplitNode:
 
 
 def _shannon_entropy(labels: np.ndarray) -> float:
+    """Shannon entropy (base 2) of the empirical class distribution at a node."""
     if labels.size == 0:
         return 0.0
     _, counts = np.unique(labels, return_counts=True)
     probabilities = counts / labels.size
+    # numpy evaluates 0*log2(0) as 0 here
     return float(-np.sum(probabilities * np.log2(probabilities)))
 
 
 def _gain_from_split(parent: np.ndarray, left: np.ndarray, right: np.ndarray) -> float:
+    """Information gain: parent entropy minus size-weighted child entropies."""
     if parent.size == 0:
         return 0.0
     left_weight = left.size / parent.size
@@ -46,6 +49,7 @@ def _gain_from_split(parent: np.ndarray, left: np.ndarray, right: np.ndarray) ->
 
 
 def _majority_class(labels: np.ndarray) -> int:
+    """Return the plurality class label for the rows in ``labels``."""
     values, counts = np.unique(labels, return_counts=True)
     return int(values[int(np.argmax(counts))])
 
@@ -53,6 +57,7 @@ def _majority_class(labels: np.ndarray) -> int:
 def _optimal_binary_split(
     X: np.ndarray, y: np.ndarray
 ) -> Tuple[Optional[int], Optional[float]]:
+    """Exhaustive search over features and distinct thresholds for maximum gain."""
     _, n_features = X.shape
     best_score = -1.0
     best_feature_index: Optional[int] = None
@@ -64,6 +69,7 @@ def _optimal_binary_split(
         for threshold in candidates:
             left_mask = X[:, feature_index] <= threshold
             right_mask = ~left_mask
+            # both sides need points or the split is invalid
             if not left_mask.any() or not right_mask.any():
                 continue
             score = _gain_from_split(y, y[left_mask], y[right_mask])
@@ -83,6 +89,13 @@ class DecisionTreeClassifier:
         self._root: Optional[TreeNode] = None
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "DecisionTreeClassifier":
+        """Fit the tree to ``X`` and integer labels ``y``.
+
+        Returns
+        -------
+        DecisionTreeClassifier
+            The fitted estimator (``self``).
+        """
         X = np.asarray(X)
         y = np.asarray(y).ravel()
         if X.size == 0 or y.size == 0:
@@ -93,6 +106,7 @@ class DecisionTreeClassifier:
         return self
 
     def _fit_node(self, X: np.ndarray, y: np.ndarray, depth: int) -> TreeNode:
+        """Grow a subtree until a stopping rule produces a leaf or split."""
         labels = np.unique(y)
         if labels.size == 1:
             return LeafNode(class_label=int(y[0]))
@@ -104,6 +118,7 @@ class DecisionTreeClassifier:
         if feature_index is None:
             return LeafNode(class_label=_majority_class(y))
 
+        # recurse on the best (feature, threshold) pair
         left_mask = X[:, feature_index] <= threshold
         right_mask = ~left_mask
         left_child = self._fit_node(X[left_mask], y[left_mask], depth + 1)
@@ -116,6 +131,7 @@ class DecisionTreeClassifier:
         )
 
     def _classify_row(self, row: np.ndarray, node: TreeNode) -> int:
+        """Return the leaf label for ``row`` by walking from ``node`` downward."""
         if isinstance(node, LeafNode):
             return node.class_label
         if row[node.feature_index] <= node.threshold:
@@ -123,12 +139,14 @@ class DecisionTreeClassifier:
         return self._classify_row(row, node.right_child)
 
     def predict(self, X: np.ndarray) -> np.ndarray:
+        """Predict a class label for each row of ``X``."""
         if self._root is None:
             raise AttributeError("Model not fitted yet.")
         X = np.asarray(X)
         return np.array([self._classify_row(row, self._root) for row in X])
 
     def score(self, X: np.ndarray, y: np.ndarray) -> float:
+        """Mean accuracy of ``predict(X)`` against ``y``."""
         y = np.asarray(y).ravel()
         preds = self.predict(X)
         return float(np.mean(preds == y))
@@ -149,6 +167,7 @@ class RandomForestClassifier:
         self._trees: List[Tuple[DecisionTreeClassifier, np.ndarray]] = []
 
     def _column_indices(self, n_features: int) -> np.ndarray:
+        """Choose which input columns a single forest tree may split on."""
         if self.max_features == "sqrt":
             num_selected = max(1, int(np.sqrt(n_features)))
             return np.random.choice(n_features, size=num_selected, replace=False)
@@ -157,11 +176,19 @@ class RandomForestClassifier:
         raise ValueError("max_features must be 'sqrt' or None.")
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "RandomForestClassifier":
+        """Fit ``n_estimators`` bagged trees with optional random column subsets.
+
+        Notes
+        -----
+        Uses the global NumPy RNG for bootstrap sampling and feature choice;
+        call ``numpy.random.seed`` before ``fit`` for reproducibility.
+        """
         X = np.asarray(X)
         y = np.asarray(y).ravel()
         n_samples, n_features = X.shape
         self._trees.clear()
 
+        # bag rows each tree; columns subset per _column_indices
         for _ in range(self.n_estimators):
             sample_indices = np.random.choice(n_samples, size=n_samples, replace=True)
             feature_indices = self._column_indices(n_features)
@@ -172,6 +199,7 @@ class RandomForestClassifier:
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
+        """Majority-vote prediction across all fitted trees."""
         X = np.asarray(X)
         if not self._trees:
             raise AttributeError("Model not fitted yet.")

@@ -8,6 +8,7 @@ import numpy as np
 
 
 def _apply_activation(z: np.ndarray, kind: str) -> np.ndarray:
+    """Apply the element-wise activation named ``kind`` to the pre-activation ``z``."""
     if kind == "tanh":
         return np.tanh(z)
     if kind == "sigmoid":
@@ -19,6 +20,7 @@ def _apply_activation(z: np.ndarray, kind: str) -> np.ndarray:
 
 
 def _activation_gradient(z: np.ndarray, kind: str) -> np.ndarray:
+    """Derivative of the activation ``kind`` evaluated element-wise at ``z``."""
     if kind == "tanh":
         t = np.tanh(z)
         return 1.0 - t ** 2
@@ -31,6 +33,7 @@ def _activation_gradient(z: np.ndarray, kind: str) -> np.ndarray:
 
 
 def _softmax(logits: np.ndarray) -> np.ndarray:
+    """Stable row-wise softmax normalising ``logits`` to class probabilities."""
     shifted = logits - logits.max(axis=1, keepdims=True)
     exp_vals = np.exp(shifted)
     return exp_vals / exp_vals.sum(axis=1, keepdims=True)
@@ -52,6 +55,7 @@ class DenseLayer:
         self.output: Optional[np.ndarray] = None
 
     def forward(self, X: np.ndarray) -> np.ndarray:
+        """Affine map plus activation; caches ``pre_activation`` and ``output``."""
         self.pre_activation = X @ self.W + self.b
         self.output = _apply_activation(self.pre_activation, self.activation)
         return self.output
@@ -106,6 +110,7 @@ class MultilayerPerceptron:
         self._class_probs: Optional[np.ndarray] = None
 
     def _forward(self, X: np.ndarray) -> np.ndarray:
+        """Run hidden layers then logits; store softmax probabilities on ``self``."""
         signal = X
         for layer in self._hidden:
             signal = layer.forward(signal)
@@ -114,6 +119,7 @@ class MultilayerPerceptron:
         return self._class_probs
 
     def _cross_entropy_loss(self, X: np.ndarray, y: np.ndarray) -> float:
+        """Average negative log-likelihood plus L2 penalty on weight matrices."""
         n = X.shape[0]
         self._forward(X)
         log_likelihood = -np.sum(
@@ -128,6 +134,7 @@ class MultilayerPerceptron:
     def _compute_gradients(
         self, X: np.ndarray, y: np.ndarray
     ) -> Tuple[List[Tuple[np.ndarray, np.ndarray]], np.ndarray, np.ndarray]:
+        """Back-propagate from softmax output to collect weight/bias gradients."""
         n = X.shape[0]
         self._forward(X)
 
@@ -163,6 +170,13 @@ class MultilayerPerceptron:
         learning_rate: float = 0.01,
         epochs: int = 20000,
     ) -> "MultilayerPerceptron":
+        """Train with full-batch gradient descent for ``epochs`` updates.
+
+        Returns
+        -------
+        MultilayerPerceptron
+            The fitted instance (``self``).
+        """
         X = np.asarray(X, dtype=float)
         y = np.asarray(y).ravel()
         if X.size == 0 or y.size == 0:
@@ -173,6 +187,7 @@ class MultilayerPerceptron:
         for _ in range(epochs):
             h_grads, gW_out, gb_out = self._compute_gradients(X, y)
 
+            # weight decay adds lambda*W to each weight gradient block
             gW_out += self.l2_penalty * self._W_final
             self._W_final -= learning_rate * gW_out
             self._b_final -= learning_rate * gb_out
@@ -185,12 +200,14 @@ class MultilayerPerceptron:
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
+        """Return the argmax class index per row from the softmax distribution."""
         if self._class_probs is None and not self._hidden:
             raise AttributeError("Model not fitted yet.")
         probs = self._forward(np.asarray(X, dtype=float))
         return np.argmax(probs, axis=1)
 
     def predict_probability(self, X: np.ndarray) -> np.ndarray:
+        """Return the matrix of class probabilities produced by ``_forward``."""
         if self._class_probs is None and not self._hidden:
             raise AttributeError("Model not fitted yet.")
         return self._forward(np.asarray(X, dtype=float))

@@ -43,9 +43,17 @@ class LinearRegression:
 
     @property
     def fitted(self) -> bool:
+        """Whether ``fit`` has been successfully called on this instance."""
         return self._is_fitted
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "LinearRegression":
+        """Estimate intercept and coefficients by ordinary least squares.
+
+        Returns
+        -------
+        LinearRegression
+            The fitted instance (``self``).
+        """
         X = np.asarray(X, dtype=float)
         y = np.asarray(y).ravel()
         if X.size == 0 or y.size == 0:
@@ -55,6 +63,7 @@ class LinearRegression:
 
         design = _with_intercept_column(X)
         gram = design.T @ design
+        # moore-penrose inverse handles rank-deficient designs
         theta = np.linalg.pinv(gram) @ design.T @ y
 
         self.intercept = float(theta[0])
@@ -63,17 +72,20 @@ class LinearRegression:
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
+        """Return affine predictions ``X @ coef_ + intercept`` for each row."""
         if not self._is_fitted or self.coef_ is None or self.intercept is None:
             raise AttributeError("Model not fitted yet.")
         X = np.asarray(X, dtype=float)
         return X @ self.coef_ + self.intercept
 
     def rmse(self, X: np.ndarray, y: np.ndarray) -> float:
+        """Root mean squared error between ``y`` and ``predict(X)``."""
         y = np.asarray(y).ravel().astype(float)
         y_hat = self.predict(X)
         return float(np.sqrt(np.mean((y - y_hat) ** 2)))
 
     def R_squared(self, X: np.ndarray, y: np.ndarray) -> float:
+        """Coefficient of determination :math:`R^2` relative to the mean of ``y``."""
         y = np.asarray(y).ravel().astype(float)
         y_hat = self.predict(X)
         ss_tot = float(np.sum((y - y.mean()) ** 2))

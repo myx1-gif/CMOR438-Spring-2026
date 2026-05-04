@@ -44,6 +44,13 @@ class DBSCANClustering:
         self.labels_: Optional[np.ndarray] = None
 
     def fit(self, X: np.ndarray) -> "DBSCANClustering":
+        """Assign cluster ids by expanding dense neighbourhoods from core points.
+
+        Returns
+        -------
+        DBSCANClustering
+            The fitted instance (``self``).
+        """
         X = np.asarray(X, dtype=float)
         if X.size == 0:
             raise ValueError("Empty data provided.")
@@ -59,6 +66,7 @@ class DBSCANClustering:
             nearby = _neighbours_within_radius(X, idx, self.epsilon)
 
             if nearby.size < self.min_neighbours:
+                # not dense enough to start a new cluster from this point
                 continue
 
             assignments[idx] = current_cluster
@@ -82,6 +90,7 @@ class DBSCANClustering:
         return self
 
     def fit_predict(self, X: np.ndarray) -> np.ndarray:
+        """Fit on ``X`` and return ``labels_`` without a separate ``predict`` call."""
         self.fit(X)
         assert self.labels_ is not None
         return self.labels_
